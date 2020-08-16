@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.CompilerServices;
+using System.Text;
 using System.Xml;
 using NUnit.Framework;
 
@@ -216,6 +217,25 @@ namespace XMLIO
             return s;
         }
 
+        public static bool FProcessGenericValue(string sValue, out string sVal, string sDefault)
+        {
+            sVal = sDefault;
+
+            if (sValue == "null")
+            {
+                sVal = null;
+                return true;
+            }
+
+            if (sValue != null && sValue != "null")
+            {
+                sVal = sValue;
+                return true;
+            }
+
+            return false;
+        }
+
         /*----------------------------------------------------------------------------
         	%%Function: ReadGenericNullableStringElement
         	%%Qualified: XMLIO.XmlIO.ReadGenericNullableStringElement
@@ -234,6 +254,24 @@ namespace XMLIO
         }
 
         /*----------------------------------------------------------------------------
+        	%%Function: FProcessGenericValue
+        	%%Qualified: XMLIO.XmlIO.FProcessGenericValue
+        	
+        ----------------------------------------------------------------------------*/
+        public static bool FProcessGenericValue(string sValue, out int nVal, int nDefault)
+        {
+            nVal = nDefault;
+
+            if (sValue != null && sValue != "null")
+            {
+                nVal = Int32.Parse(sValue);
+                return true;
+            }
+
+            return false;
+        }
+
+        /*----------------------------------------------------------------------------
         	%%Function: ConvertElementStringToInt
         	%%Qualified: XMLIO.XmlIO.ConvertElementStringToInt
         	
@@ -241,8 +279,8 @@ namespace XMLIO
         ----------------------------------------------------------------------------*/
         internal static int? ConvertElementStringToInt(string sElementString)
         {
-            if (sElementString != null && sElementString != "null")
-                return Int32.Parse(sElementString);
+            if (FProcessGenericValue(sElementString, out int nVal, 0))
+                return nVal;
 
             return null;
         }
@@ -259,14 +297,32 @@ namespace XMLIO
         }
 
         /*----------------------------------------------------------------------------
+        	%%Function: FProcessGenericValue
+        	%%Qualified: XMLIO.XmlIO.FProcessGenericValue
+        	
+        ----------------------------------------------------------------------------*/
+        public static bool FProcessGenericValue(string sValue, out UInt64 nVal, UInt64 nDefault)
+        {
+            nVal = nDefault;
+
+            if (sValue != null && sValue != "null")
+            {
+                nVal = UInt64.Parse(sValue);
+                return true;
+            }
+
+            return false;
+        }
+
+        /*----------------------------------------------------------------------------
         	%%Function: ConvertElementStringToUInt64
         	%%Qualified: XMLIO.XmlIO.ConvertElementStringToUInt64
         	
         ----------------------------------------------------------------------------*/
         internal static UInt64? ConvertElementStringToUInt64(string sElementString)
         {
-            if (sElementString != null)
-                return UInt64.Parse(sElementString);
+            if (FProcessGenericValue(sElementString, out UInt64 nVal, 0))
+                return nVal;
 
             return null;
         }
@@ -282,6 +338,28 @@ namespace XMLIO
         }
 
         /*----------------------------------------------------------------------------
+        	%%Function: FProcessGenericValue
+        	%%Qualified: XMLIO.XmlIO.FProcessGenericValue
+        	
+        ----------------------------------------------------------------------------*/
+        public static bool FProcessGenericValue(string sValue, out bool fValue, bool fDefault)
+        {
+            fValue = fDefault;
+
+            if (sValue == null)
+                return false;
+
+            if (sValue == "0" || sValue == "false")
+                fValue = false;
+            else if (sValue == "1" || sValue == "true")
+                fValue = true;
+            else
+                throw new FormatException($"{sValue} is not a boolean value");
+
+            return true;
+        }
+
+        /*----------------------------------------------------------------------------
         	%%Function: ConvertElementStringToBool
         	%%Qualified: XMLIO.XmlIO.ConvertElementStringToBool
         	
@@ -289,15 +367,10 @@ namespace XMLIO
         ----------------------------------------------------------------------------*/
         public static bool? ConvertElementStringToBool(string sElementString)
         {
-            if (sElementString == null)
+            if (!FProcessGenericValue(sElementString, out bool f, false))
                 return null;
 
-            if (sElementString == "0" || sElementString == "false")
-                return false;
-            if (sElementString == "1" || sElementString == "true")
-                return true;
-
-            throw new FormatException($"{sElementString} is not a boolean value");
+            return f;
         }
 
         /*----------------------------------------------------------------------------
@@ -317,9 +390,9 @@ namespace XMLIO
         	
             this is either empty or has a single <string> element as a child
         ----------------------------------------------------------------------------*/
-        public static string[] RecepientsReadElement(XmlReader xr)
+        public static string[] ReadElementWithChildrenElementArray(string sRootElement, XmlReader xr, string sArrayElement)
         {
-            if (xr.Name != "Recepients")
+            if (xr.Name != sRootElement)
                 throw new Exception("not at the correct node");
 
             if (xr.IsEmptyElement)
@@ -336,8 +409,8 @@ namespace XMLIO
 
                 if (nt == XmlNodeType.EndElement)
                 {
-                    if (xr.Name != "Recepients")
-                        throw new Exception("encountered end node not matching <Recepients>");
+                    if (xr.Name != sRootElement)
+                        throw new Exception($"encountered end node not matching <{sRootElement}>");
 
                     // this just means that it had child text nodes that didn't matter (like whitespace or comments)
                     // its ok, just advance reader past it and return
@@ -354,20 +427,141 @@ namespace XMLIO
 
                         pls.Add(s);
 
-                        // now we should be at the EndElement for Recepients
-                        if (xr.Name == "Recepients")
+                        // now we should be at the EndElement for sRootElement
+                        if (xr.Name == sRootElement)
                         {
                             xr.ReadEndElement();
                             return pls.ToArray();
                         }
 
-                        if (xr.Name != "string")
+                        if (xr.Name != sArrayElement)
                             throw new Exception("not at the correct node");
                     }
                 }
             }
 
-            throw new Exception("didn't find string child in recepients");
+            throw new Exception($"didn't find string child in {sRootElement}");
+        }
+
+        public interface IContentCollector
+        {
+            void AddTextContent(string s);
+            void AddCDataContent(string s);
+        }
+
+        public class ContentCollector : IContentCollector
+        {
+            private StringBuilder m_sb = new StringBuilder();
+
+            public override string ToString()
+            {
+                return m_sb.ToString();
+            }
+
+            public ContentCollector() { }
+
+            public void AddTextContent(string s)
+            {
+                m_sb.Append(s);
+            }
+
+            public void AddCDataContent(string cdata)
+            {
+                m_sb.Append(cdata);
+            }
+        }
+
+        // process attribute just processes the given attribute/value pair
+        public delegate bool FProcessAttributeDelegate<T>(string sAttribute, string sValue, T t);
+
+        // parse element is expected to advance the reader past the element being parsed
+        public delegate bool FParseElementDelegate<T>(XmlReader xr, string sElement, T t);
+
+        public static bool FReadElement<T>(XmlReader xr, T t, string sRootElement, FProcessAttributeDelegate<T> processAttribute, FParseElementDelegate<T> parseElement, IContentCollector contentCollect = null)
+        {
+            bool fRootWasEmpty = xr.IsEmptyElement;
+
+            if (xr.Name == sRootElement)
+            {
+                if (fRootWasEmpty && !xr.HasAttributes)
+                {
+                    xr.Read();
+                    SkipNonContent(xr);
+                    return false;
+                }
+
+                // prepare read the attributes
+                if (!XmlIO.Read(xr))
+                    throw new Exception("can't unclosed secretFileConfig element");
+
+                XmlIO.SkipNonContent(xr);
+            }
+            else
+            {
+                throw new Exception($"parsing <{sRootElement}> without <{sRootElement}>");
+            }
+
+            // the reader should already be on the <secretFile>
+            while (true)
+            {
+                if (xr.NodeType == XmlNodeType.Attribute)
+                {
+                    if (processAttribute == null || !processAttribute(xr.Name, xr.Value, t))
+                        throw new Exception($"bad attribute {xr.Name}");
+
+                    XmlIO.Read(xr);
+                    XmlIO.SkipNonContent(xr);
+                    if (fRootWasEmpty && xr.NodeType != XmlNodeType.Attribute)
+                        return true;
+
+                    continue;
+                }
+
+                if (fRootWasEmpty)
+                    throw new Exception("empty element with no attributes at root? shouldn't get here");
+
+                if (xr.NodeType == XmlNodeType.Element)
+                {
+                    if (parseElement == null || !parseElement(xr, xr.Name, t))
+                        throw new Exception($"unknown element {xr.Name}");
+                    continue;
+                }
+
+                if (xr.NodeType == XmlNodeType.EndElement)
+                {
+                    if (xr.Name != sRootElement)
+                        throw new Exception($"open element {sRootElement} does not match close element {xr.Name}");
+                    XmlIO.Read(xr);
+                    XmlIO.SkipNonContent(xr);
+                    break;
+                }
+
+                if (xr.NodeType == XmlNodeType.Text)
+                {
+                    if (contentCollect == null)
+                        throw new Exception($"text encountered without text collector: {xr.Value}");
+
+                    contentCollect.AddTextContent(xr.Value);
+                    XmlIO.Read(xr);
+                    XmlIO.SkipNonContent(xr);
+                    continue;
+                }
+
+                if (xr.NodeType == XmlNodeType.CDATA)
+                {
+                    if (contentCollect == null)
+                        throw new Exception($"cdata encountered without text collector: {xr.Value}");
+
+                    contentCollect.AddCDataContent(xr.Value);
+                    XmlIO.Read(xr);
+                    XmlIO.SkipNonContent(xr);
+                    continue;
+                }
+
+                throw new Exception($"unknown node type {xr.NodeType}");
+            }
+
+            return true;
         }
     }
 }

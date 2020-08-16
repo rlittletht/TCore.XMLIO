@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Xml;
 using NUnit.Framework;
@@ -16,6 +17,9 @@ namespace XMLIO.Tests
 
 
         #region TESTS
+
+        #region XmlReaderTests
+
         /*----------------------------------------------------------------------------
         	%%Function: SetupXmlReaderForTest
         	%%Qualified: wp2droidMsg.SmsMessage.SetupXmlReaderForTest
@@ -167,9 +171,9 @@ namespace XMLIO.Tests
             }
 
             if (sExpectedException == null)
-                Assert.AreEqual(rgsExpectedReturn, RecepientsReadElement(xr));
+                Assert.AreEqual(rgsExpectedReturn, ReadElementWithChildrenElementArray("Recepients", xr, "string"));
             if (sExpectedException != null)
-                RunTestExpectingException(() => RecepientsReadElement(xr), sExpectedException);
+                RunTestExpectingException(() => ReadElementWithChildrenElementArray("Recepients", xr, "string"), sExpectedException);
         }
 
         [TestCase("<bar><Recepients><string>1234</string></Recepients><foo/></bar>", XmlNodeType.Element, "foo")]
@@ -186,7 +190,7 @@ namespace XMLIO.Tests
             XmlReader xr = SetupXmlReaderForTest(sTest);
             AdvanceReaderToTestContent(xr, "Recepients");
 
-            RecepientsReadElement(xr);
+            ReadElementWithChildrenElementArray("Recepients", xr, "string");
             Assert.AreEqual(ntExpected, xr.NodeType);
             if (sNameExpected != null)
                 Assert.AreEqual(sNameExpected, xr.Name);
@@ -310,6 +314,338 @@ namespace XMLIO.Tests
 
             return s;
         }
+        #endregion
+
+        [Test]
+        public static void TestReadElement_EmptyElement_MismatchedFailParse()
+        {
+            string sXml = "<element/>";
+            XmlReader xr = SetupXmlReaderForTest(sXml);
+            AdvanceReaderToTestContent(xr, "element");
+
+            Assert.Throws<Exception>(()=> FReadElement<object>(xr, null, "badRoot", null, null));
+        }
+
+        [Test]
+        public static void TestReadElement_EmptyElementRoot()
+        {
+            string sXml = "<element/>";
+            XmlReader xr = SetupXmlReaderForTest(sXml);
+            AdvanceReaderToTestContent(xr, "element");
+
+            Assert.IsFalse(FReadElement<object>(xr, null, "element", null, null));
+            Assert.AreEqual(XmlNodeType.None, xr.NodeType);
+        }
+
+        [Test]
+        public static void TestReadElement_EmptyElementEmbeddedWithNoSibling()
+        {
+            string sXml = "<outer><element/></outer>";
+            XmlReader xr = SetupXmlReaderForTest(sXml);
+            AdvanceReaderToTestContent(xr, "element");
+
+            Assert.IsFalse(FReadElement<object>(xr, null, "element", null, null));
+            Assert.AreEqual(XmlNodeType.EndElement, xr.NodeType);
+            Assert.AreEqual("outer", xr.Name);
+        }
+
+        [Test]
+        public static void TestReadElement_EmptyElementEmbeddedWithSiblingElement()
+        {
+            string sXml = "<outer><element/><element/></outer>";
+            XmlReader xr = SetupXmlReaderForTest(sXml);
+            AdvanceReaderToTestContent(xr, "element");
+
+            Assert.IsFalse(FReadElement<object>(xr, null, "element", null, null));
+            Assert.AreEqual(XmlNodeType.Element, xr.NodeType);
+            Assert.AreEqual("element", xr.Name);
+        }
+
+        [Test]
+        public static void TestReadElement_EmptyElementEmbeddedWithSiblingText()
+        {
+            string sXml = "<outer><element/>text</outer>";
+            XmlReader xr = SetupXmlReaderForTest(sXml);
+            AdvanceReaderToTestContent(xr, "element");
+
+            Assert.IsFalse(FReadElement<object>(xr, null, "element", null, null));
+            Assert.AreEqual(XmlNodeType.Text, xr.NodeType);
+            Assert.AreEqual("", xr.Name);
+        }
+
+        [Test]
+        public static void TestReadElement_EmptyElementEmbeddedWithSiblingCData()
+        {
+            string sXml = "<outer><element/><![CDATA[test]]></outer>";
+            XmlReader xr = SetupXmlReaderForTest(sXml);
+            AdvanceReaderToTestContent(xr, "element");
+
+            Assert.IsFalse(FReadElement<object>(xr, null, "element", null, null));
+            Assert.AreEqual(XmlNodeType.CDATA, xr.NodeType);
+            Assert.AreEqual("", xr.Name);
+        }
+
+        [Test]
+        public static void TestReadElement_EmptyElementEmbeddedWithSiblingWhitespaceCData()
+        {
+            string sXml = "<outer><element/>\n     <![CDATA[test]]></outer>";
+            XmlReader xr = SetupXmlReaderForTest(sXml);
+            AdvanceReaderToTestContent(xr, "element");
+
+            Assert.IsFalse(FReadElement<object>(xr, null, "element", null, null));
+            Assert.AreEqual(XmlNodeType.CDATA, xr.NodeType);
+            Assert.AreEqual("", xr.Name);
+        }
+
+        [Test]
+        public static void TestReadElement_EmptyElementEmbeddedWithSiblingEntity()
+        {
+            string sXml = "<outer><element/>&gt;</outer>";
+            XmlReader xr = SetupXmlReaderForTest(sXml);
+            AdvanceReaderToTestContent(xr, "element");
+
+            Assert.IsFalse(FReadElement<object>(xr, null, "element", null, null));
+            Assert.AreEqual(XmlNodeType.Text, xr.NodeType);
+            Assert.AreEqual("", xr.Name);
+        }
+
+        [Test]
+        public static void TestReadElement_EmptyElementEmbeddedWitSiblingComment()
+        {
+            string sXml = "<outer><element/><!-- test comment --></outer>";
+            XmlReader xr = SetupXmlReaderForTest(sXml);
+            AdvanceReaderToTestContent(xr, "element");
+
+            Assert.IsFalse(FReadElement<object>(xr, null, "element", null, null));
+            Assert.AreEqual(XmlNodeType.EndElement, xr.NodeType);
+            Assert.AreEqual("outer", xr.Name);
+        }
+
+        [Test]
+        public static void TestReadElement_NonEmptyRootElement()
+        {
+            string sXml = "<outer><knownElement/></outer>";
+            XmlReader xr = SetupXmlReaderForTest(sXml);
+            AdvanceReaderToTestContent(xr, "outer");
+
+            UnitTestCollector collector = new UnitTestCollector();
+
+            Assert.IsTrue(FReadElement<UnitTestCollector>(xr, collector, "outer", FProcessKnownAttributesTest, FParseKnownChildElementsTest));
+            Assert.AreEqual(XmlNodeType.None, xr.NodeType);
+        }
+
+        [Test]
+        public static void TestReadElement_NonEmptyEmbeddedElement()
+        {
+            string sXml = "<outer><element><knownChild/></element></outer>";
+            XmlReader xr = SetupXmlReaderForTest(sXml);
+            AdvanceReaderToTestContent(xr, "element");
+
+            UnitTestCollector collector = new UnitTestCollector();
+            Assert.IsTrue(FReadElement<UnitTestCollector>(xr, collector, "element", FProcessKnownAttributesTest, FParseKnownChildElementsTest));
+            Assert.AreEqual(XmlNodeType.EndElement, xr.NodeType);
+            Assert.AreEqual("outer", xr.Name);
+        }
+
+
+
+        #region Element/Attribute Parsing Tests
+
+        [Test]
+        public static void TestReadElement_EmptyRootElementWithAttributes_NoProcessor()
+        {
+            string sXml = "<element attr='value'/>";
+            XmlReader xr = SetupXmlReaderForTest(sXml);
+            AdvanceReaderToTestContent(xr, "element");
+
+            Assert.Throws<Exception>(() => FReadElement<object>(xr, null, "element", null, null));
+        }
+
+        public class UnitTestCollector
+        {
+            public Dictionary<string, string> mpAttrVal = new Dictionary<string, string>();
+            public Dictionary<string, string> mpEltTextVal = new Dictionary<string, string>();
+            public Dictionary<string, string> mpEltCDataVal = new Dictionary<string, string>();
+
+            public List<string> StackChildren = new List<string>();
+
+            public UnitTestCollector()
+            {
+                StackChildren.Add("root");
+            }
+
+            public void AddAttribute(string sAttr, string sValue)
+            {
+                mpAttrVal.Add($"{StackChildren[StackChildren.Count - 1]}_{sAttr}", sValue);
+            }
+
+            public void OpenElement(string sElement)
+            {
+                StackChildren.Add(sElement);
+            }
+
+            public void CloseElement(string sElement)
+            {
+                if (StackChildren[StackChildren.Count - 1] != sElement)
+                    throw new Exception($"{StackChildren[StackChildren.Count - 1]} != {sElement}");
+
+                StackChildren.RemoveAt(StackChildren.Count - 1);
+            }
+        }
+
+        public static bool FProcessKnownAttributesTest(string sAttribute, string sValue, UnitTestCollector collector)
+        {
+            if (sAttribute.IndexOf("known", StringComparison.Ordinal) != -1)
+                collector.AddAttribute(sAttribute, sValue);
+            else
+                return false;
+
+            return true;
+        }
+
+        [Test]
+        public static void TestReadElement_EmptyRootElementWithAttributes_OneKnown()
+        {
+            UnitTestCollector collector = new UnitTestCollector();
+            string sXml = "<element knownAttr='value'/>";
+            XmlReader xr = SetupXmlReaderForTest(sXml);
+            AdvanceReaderToTestContent(xr, "element");
+
+            Assert.IsTrue(FReadElement<UnitTestCollector>(xr, collector, "element", FProcessKnownAttributesTest, null));
+            Assert.AreEqual("value", collector.mpAttrVal["root_knownAttr"]);
+        }
+
+        [Test]
+        public static void TestReadElement_EmptyRootElementWithAttributes_ThreeKnown()
+        {
+            UnitTestCollector collector = new UnitTestCollector();
+            string sXml = "<element knownAttr1='value1' knownAttr2='value2' knownAttr3='value3'/>";
+            XmlReader xr = SetupXmlReaderForTest(sXml);
+            AdvanceReaderToTestContent(xr, "element");
+
+            Assert.IsTrue(FReadElement<UnitTestCollector>(xr, collector, "element", FProcessKnownAttributesTest, null));
+            Assert.AreEqual("value1", collector.mpAttrVal["root_knownAttr1"]);
+            Assert.AreEqual("value2", collector.mpAttrVal["root_knownAttr2"]);
+            Assert.AreEqual("value3", collector.mpAttrVal["root_knownAttr3"]);
+        }
+
+        [Test]
+        public static void TestReadElement_EmptyRootElementWithAttributes_OneUnknown()
+        {
+            UnitTestCollector collector = new UnitTestCollector();
+            string sXml = "<element knownAttr='value' invalid='value'/>";
+            XmlReader xr = SetupXmlReaderForTest(sXml);
+            AdvanceReaderToTestContent(xr, "element");
+
+            Assert.Throws<Exception>(() => FReadElement<UnitTestCollector>(xr, collector, "element", FProcessKnownAttributesTest, null));
+        }
+
+        public static bool FParseKnownChildElementsTest(XmlReader xr, string sElement, UnitTestCollector collector)
+        {
+            if (sElement.IndexOf("known", StringComparison.Ordinal) != -1)
+            {
+                collector.OpenElement(sElement);
+                FReadElement<UnitTestCollector>(xr, collector, sElement, FProcessKnownAttributesTest, FParseKnownChildElementsTest);
+                collector.CloseElement(sElement);
+                return true;
+            }
+
+            return false;
+        }
+
+        // now let's test with children
+        [Test]
+        public static void TestReadElement_RootElementWithChild_MismatchedParent()
+        {
+            UnitTestCollector collector = new UnitTestCollector();
+            string sXml = "<element><knownChild/></element2>";
+            XmlReader xr = SetupXmlReaderForTest(sXml);
+            AdvanceReaderToTestContent(xr, "element");
+
+            Assert.Throws<XmlException>(
+                () => FReadElement<UnitTestCollector>(xr, collector, "element", FProcessKnownAttributesTest, FParseKnownChildElementsTest));
+        }
+
+        [Test]
+        public static void TestReadElement_RootElementWithChild()
+        {
+            UnitTestCollector collector = new UnitTestCollector();
+            string sXml = "<element><knownChild/></element>";
+            XmlReader xr = SetupXmlReaderForTest(sXml);
+            AdvanceReaderToTestContent(xr, "element");
+
+            Assert.IsTrue(FReadElement<UnitTestCollector>(xr, collector, "element", FProcessKnownAttributesTest, FParseKnownChildElementsTest));
+        }
+
+        [Test]
+        public static void TestReadElement_RootElementWithChildWithAttributes()
+        {
+            UnitTestCollector collector = new UnitTestCollector();
+            string sXml = "<element><knownChild knownAttr1='value'/></element>";
+            XmlReader xr = SetupXmlReaderForTest(sXml);
+            AdvanceReaderToTestContent(xr, "element");
+
+            Assert.IsTrue(FReadElement<UnitTestCollector>(xr, collector, "element", FProcessKnownAttributesTest, FParseKnownChildElementsTest));
+            Assert.AreEqual("value", collector.mpAttrVal["knownChild_knownAttr1"]);
+        }
+
+        [Test]
+        public static void TestReadElement_RootElementWithChildrenWithAttributes()
+        {
+            UnitTestCollector collector = new UnitTestCollector();
+            string sXml = "<element><knownChild knownAttr1='value'/><knownChild2 knownAttr2='value2'/></element>";
+            XmlReader xr = SetupXmlReaderForTest(sXml);
+            AdvanceReaderToTestContent(xr, "element");
+
+            Assert.IsTrue(FReadElement<UnitTestCollector>(xr, collector, "element", FProcessKnownAttributesTest, FParseKnownChildElementsTest));
+            Assert.AreEqual("value", collector.mpAttrVal["knownChild_knownAttr1"]);
+            Assert.AreEqual("value2", collector.mpAttrVal["knownChild2_knownAttr2"]);
+        }
+        #endregion
+
+        #region Content Parsing
+        [Test]
+        public static void TestReadElement_RootElementWithSimpleTextContent()
+        {
+            string sXml = "<outer>text</outer>";
+            XmlReader xr = SetupXmlReaderForTest(sXml);
+            AdvanceReaderToTestContent(xr, "outer");
+
+            XmlIO.ContentCollector contentCollector = new XmlIO.ContentCollector();
+
+            Assert.IsTrue(FReadElement<object>(xr, null, "outer", null, null, contentCollector));
+            Assert.AreEqual(XmlNodeType.None, xr.NodeType);
+            Assert.AreEqual("text", contentCollector.ToString());
+        }
+
+        [Test]
+        public static void TestReadElement_RootElementWithTextTwoSpacesContent()
+        {
+            string sXml = "<outer>text  text</outer>";
+            XmlReader xr = SetupXmlReaderForTest(sXml);
+            AdvanceReaderToTestContent(xr, "outer");
+
+            XmlIO.ContentCollector contentCollector = new XmlIO.ContentCollector();
+
+            Assert.IsTrue(FReadElement<object>(xr, null, "outer", null, null, contentCollector));
+            Assert.AreEqual(XmlNodeType.None, xr.NodeType);
+            Assert.AreEqual("text  text", contentCollector.ToString());
+        }
+
+        [Test]
+        public static void TestReadElement_RootElementCDataContent()
+        {
+            string sXml = "<outer><![CDATA[test<>]]></outer>";
+            XmlReader xr = SetupXmlReaderForTest(sXml);
+            AdvanceReaderToTestContent(xr, "outer");
+
+            XmlIO.ContentCollector contentCollector = new XmlIO.ContentCollector();
+
+            Assert.IsTrue(FReadElement<object>(xr, null, "outer", null, null, contentCollector));
+            Assert.AreEqual(XmlNodeType.None, xr.NodeType);
+            Assert.AreEqual("test<>", contentCollector.ToString());
+        }
+        #endregion
 
         #endregion
     }
