@@ -522,8 +522,11 @@ namespace XMLIO
 
                 if (xr.NodeType == XmlNodeType.Element)
                 {
-                    if (parseElement == null || !parseElement(xr, xr.Name, t))
+                    if (parseElement == null)
                         throw new Exception($"unknown element {xr.Name}");
+
+                    // if it the parse returns false, that just means it was an empty element...
+                    parseElement(xr, xr.Name, t);
                     continue;
                 }
 
