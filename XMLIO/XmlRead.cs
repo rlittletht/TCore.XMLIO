@@ -465,6 +465,8 @@ namespace XMLIO
 		{
 			private StringBuilder m_sb = new StringBuilder();
 
+			public bool HasContent => m_sb.Length > 0;
+			
 			public override string ToString()
 			{
 				return m_sb.ToString();
