@@ -19,21 +19,21 @@ jobs:
   build:
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
-
+    environment: Publish
+    
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
-      - name: Setup .NET Core
+      - name: Setup .NET
         uses: actions/setup-dotnet@v1
         with:
-          dotnet-version: 3.1.101
+          dotnet-version: 3.1.x
       - name: Install dependencies
         run: dotnet restore
-      - name: Build
-        run: dotnet build --configuration Release --no-restore
+      - name: Build XMLIO
+        run: dotnet build --configuration Release --no-restore XMLIO
       - name: Publish TCore.XMLIO
-        uses: brandedoutcast/publish-nuget@v2.5.2
-        with:
-          PROJECT_FILE_PATH:XMLIO/XMLIO.csproj
-          NUGET_KEY:${{secrets.THETAGET_API_KEY}}
+        run: dotnet nuget push XMLIO/bin/Release/*.nupkg -s https://thetaget.azurewebsites.net/nuget -k ${NUGET_KEY} --no-symbols --skip-duplicate
+        env:
+          NUGET_KEY: ${{secrets.THETAGET_API_KEY}}
