@@ -35,5 +35,6 @@ jobs:
       - name: Publish TCore.XMLIO
         uses: brandedoutcast/publish-nuget@v2.5.2
         with:
-          PROJECT_FILE_PATH:XMLIO/XMLIO.csproj
-          NUGET_KEY:${{secrets.THETAGET_API_KEY}}
+          PROJECT_FILE_PATH: XMLIO/XMLIO.csproj
+          NUGET_KEY: ${{secrets.THETAGET_API_KEY}}
+          NUGET_SOURCE: http://thetaget.azurewebsites.net/nuget
