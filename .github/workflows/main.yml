@@ -34,8 +34,6 @@ jobs:
       - name: Build XMLIO
         run: dotnet build --configuration Release --no-restore XMLIO
       - name: Publish TCore.XMLIO
-        uses: brandedoutcast/publish-nuget@v2.5.2
-        with:
-          PROJECT_FILE_PATH: XMLIO/XMLIO.csproj
+        run: dotnet nuget push XMLIO/bin\Release\*.nupkg -s https://thetaget.azurewebsites.net/nuget -k ${NUGET_KEY} --no-symbols --skip-duplicate
+        env:
           NUGET_KEY: ${{secrets.THETAGET_API_KEY}}
-          NUGET_SOURCE: https://thetaget.azurewebsites.net/nuget
