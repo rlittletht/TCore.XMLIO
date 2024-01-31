@@ -616,6 +616,52 @@ namespace XMLIO.Tests
             Assert.IsTrue(FReadElement<object>(xr, null, "outer", null, null, contentCollector));
             Assert.AreEqual(XmlNodeType.None, xr.NodeType);
             Assert.AreEqual("text", contentCollector.ToString());
+            Assert.IsFalse(contentCollector.NullContent);
+        }
+
+        [Test]
+        public static void TestReadElement_RootElementWithEmptyTextContent()
+        {
+            string sXml = "<outer> </outer>";
+            XmlReader xr = SetupXmlReaderForTest(sXml);
+            AdvanceReaderToTestContent(xr, "outer");
+
+            XmlIO.ContentCollector contentCollector = new XmlIO.ContentCollector();
+
+            Assert.IsTrue(FReadElement<object>(xr, null, "outer", null, null, contentCollector));
+            Assert.AreEqual(XmlNodeType.None, xr.NodeType);
+            Assert.AreEqual("", contentCollector.ToString());
+            Assert.IsFalse(contentCollector.NullContent);
+        }
+
+        [Test]
+        public static void TestReadElement_EmptyRootElement()
+        {
+            string sXml = "<outer />";
+            XmlReader xr = SetupXmlReaderForTest(sXml);
+            AdvanceReaderToTestContent(xr, "outer");
+
+            XmlIO.ContentCollector contentCollector = new XmlIO.ContentCollector();
+
+            Assert.IsFalse(FReadElement<object>(xr, null, "outer", null, null, contentCollector));
+            Assert.AreEqual(XmlNodeType.None, xr.NodeType);
+            Assert.AreEqual("", contentCollector.ToString());
+            Assert.IsTrue(contentCollector.NullContent);
+        }
+
+        [Test]
+        public static void TestReadElement_EmptyRootElement_WithAttributes()
+        {
+            string sXml = "<outer attr='foo' />";
+            XmlReader xr = SetupXmlReaderForTest(sXml);
+            AdvanceReaderToTestContent(xr, "outer");
+
+            XmlIO.ContentCollector contentCollector = new XmlIO.ContentCollector();
+
+            Assert.IsTrue(FReadElement<object>(xr, null, "outer", ((attribute, value, o) => true), null, contentCollector));
+            Assert.AreEqual(XmlNodeType.None, xr.NodeType);
+            Assert.AreEqual("", contentCollector.ToString());
+            Assert.IsTrue(contentCollector.NullContent);
         }
 
         [Test]
@@ -630,6 +676,7 @@ namespace XMLIO.Tests
             Assert.IsTrue(FReadElement<object>(xr, null, "outer", null, null, contentCollector));
             Assert.AreEqual(XmlNodeType.None, xr.NodeType);
             Assert.AreEqual("text  text", contentCollector.ToString());
+            Assert.IsFalse(contentCollector.NullContent);
         }
 
         [Test]
@@ -644,6 +691,7 @@ namespace XMLIO.Tests
             Assert.IsTrue(FReadElement<object>(xr, null, "outer", null, null, contentCollector));
             Assert.AreEqual(XmlNodeType.None, xr.NodeType);
             Assert.AreEqual("test<>", contentCollector.ToString());
+            Assert.IsFalse(contentCollector.NullContent);
         }
         #endregion
 
