@@ -58,6 +58,9 @@
       <Private>True</Private>
       <Private>True</Private>
     </Reference>
+    <Reference Include="TCore.Exceptions, Version=1.1.1.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\TCore.Exceptions.1.1.1\lib\netstandard2.0\TCore.Exceptions.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="XmlIO_tests.cs" />

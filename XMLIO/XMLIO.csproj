@@ -2,8 +2,8 @@
 
   <PropertyGroup>
     <TargetFrameworks>net462;net472;net48;net7.0;netstandard2.0</TargetFrameworks>
-    <Version>1.2.0</Version>
-    <AssemblyVersion>1.2.0.0</AssemblyVersion>
+    <Version>1.3.0</Version>
+    <AssemblyVersion>1.3.0.0</AssemblyVersion>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <Authors>Robert Little</Authors>
     <Product>TCore.XMLIO</Product>
@@ -11,6 +11,11 @@
     <Copyright>2021 Robert Little</Copyright>
     <PackageProjectUrl>https://github.com/rlittletht/TCore.XMLIO</PackageProjectUrl>
     <PackageId>TCore.XMLIO</PackageId>
+    <UserSecretsId>25c38168-49b4-4f9b-95be-f91fad05509d</UserSecretsId>
   </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="TCore.Exceptions" Version="1.1.1" />
+  </ItemGroup>
 
 </Project>

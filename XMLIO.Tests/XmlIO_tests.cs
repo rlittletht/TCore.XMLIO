@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Xml;
+using TCore.Exceptions;
+
 using NUnit.Framework;
 
 namespace XMLIO.Tests
@@ -66,6 +68,8 @@ namespace XMLIO.Tests
                 Assert.Throws<ArgumentException>(pfn);
             else if (sExpectedException == "System.FormatException")
                 Assert.Throws<FormatException>(pfn);
+            else if (sExpectedException == "XMLIO.XmlIoExceptionSchemaFailure")
+                Assert.Throws<XmlioExceptionSchemaFailure>(pfn);
             else if (sExpectedException != null)
                 throw new Exception("unknown exception type");
         }
@@ -288,10 +292,10 @@ namespace XMLIO.Tests
         [TestCase("1", true, null)]
         [TestCase("true", true, null)]
         [TestCase(null, null, null)]
-        [TestCase("True", false, "System.FormatException")]
-        [TestCase("", false, "System.FormatException")]
-        [TestCase("2", false, "System.FormatException")]
-        [TestCase("1 true", false, "System.FormatException")]
+        [TestCase("True", false, "XMLIO.XmlIoExceptionSchemaFailure")]
+        [TestCase("", false, "XMLIO.XmlIoExceptionSchemaFailure")]
+        [TestCase("2", false, "XMLIO.XmlIoExceptionSchemaFailure")]
+        [TestCase("1 true", false, "XMLIO.XmlIoExceptionSchemaFailure")]
         [Test]
         public static void TestConvertElementStringToBool(string sTest, bool? fExpectedVal, string sExpectedException)
         {
@@ -458,7 +462,7 @@ namespace XMLIO.Tests
             XmlReader xr = SetupXmlReaderForTest(sXml);
             AdvanceReaderToTestContent(xr, "element");
 
-            Assert.Throws<Exception>(() => FReadElement<object>(xr, null, "element", null, null));
+            Assert.Throws<XMLIO.XmlioExceptionSchemaFailure>(() => FReadElement<object>(xr, null, "element", null, null));
         }
 
         public class UnitTestCollector
@@ -537,7 +541,7 @@ namespace XMLIO.Tests
             XmlReader xr = SetupXmlReaderForTest(sXml);
             AdvanceReaderToTestContent(xr, "element");
 
-            Assert.Throws<Exception>(() => FReadElement<UnitTestCollector>(xr, collector, "element", FProcessKnownAttributesTest, null));
+            Assert.Throws<XmlioExceptionSchemaFailure>(() => FReadElement<UnitTestCollector>(xr, collector, "element", FProcessKnownAttributesTest, null));
         }
 
         public static bool FParseKnownChildElementsTest(XmlReader xr, string sElement, UnitTestCollector collector)

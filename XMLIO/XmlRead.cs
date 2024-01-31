@@ -22,7 +22,7 @@ namespace XMLIO
         public static List<T> ReadListOfSingleElements(XmlReader xr, string sParentElement, string sElement, CreateFromXmlElement createFromXmlElement)
         {
             if (xr.Name != sParentElement)
-                throw new System.Exception($"not at correct location to read {sParentElement}");
+                throw new XmlioExceptionInternalParserFailure($"not at correct location to read {sParentElement}");
 
             if (xr.IsEmptyElement)
                 return null;
@@ -43,7 +43,7 @@ namespace XMLIO
                         continue;
                     }
 
-                    throw new System.Exception($"unknown element {xr.Name} under {sParentElement} element");
+                    throw new XmlioExceptionSchemaFailure($"unknown element {xr.Name} under {sParentElement} element");
                 }
 
                 if (nt == XmlNodeType.EndElement)
@@ -54,11 +54,11 @@ namespace XMLIO
                         return t;
                     }
 
-                    throw new System.Exception($"unmatched {sParentElement} element with {xr.Name}");
+                    throw new XmlioExceptionXmlSyntaxError($"unmatched {sParentElement} element with {xr.Name}");
                 }
 
                 if (!xr.Read())
-                    throw new System.Exception("xml read ended before {sParentElement closed");
+                    throw new XmlioExceptionXmlSyntaxError("xml read ended before {sParentElement closed");
             }
         }
 
@@ -72,7 +72,7 @@ namespace XMLIO
             T t = new T();
 
             if (xr.Name != sElement)
-                throw new System.Exception($"not at correct location to read {sElement}");
+                throw new XmlioExceptionInternalParserFailure($"not at correct location to read {sElement}");
 
             bool fEmptyElement = xr.IsEmptyElement;
 
@@ -85,19 +85,19 @@ namespace XMLIO
 
                 // PUT MMS children here
                 if (nt == XmlNodeType.Element)
-                    throw new System.Exception($"unexpected element {xr.Name} under {sElement} element");
+                    throw new XmlioExceptionSchemaFailure($"unexpected element {xr.Name} under {sElement} element");
 
                 if (nt == XmlNodeType.EndElement)
                 {
                     if (xr.Name != sElement)
-                        throw new System.Exception($"unmatched {sElement} element");
+                        throw new XmlioExceptionXmlSyntaxError($"unmatched {sElement} element");
 
                     xr.ReadEndElement();
                     break;
                 }
 
                 if (xr.NodeType != XmlNodeType.Attribute)
-                    throw new System.Exception($"unexpected non attribute on <{sElement}> element");
+                    throw new XmlioExceptionInternalParserFailure($"unexpected non attribute on <{sElement}> element");
 
                 while (true)
                 {
@@ -118,7 +118,7 @@ namespace XMLIO
                 }
 
                 if (!XmlIO.Read(xr))
-                    throw new System.Exception($"never encountered end {sElement} element");
+                    throw new XmlioExceptionXmlSyntaxError($"never encountered end {sElement} element");
             }
 
             return t;
@@ -206,7 +206,7 @@ namespace XMLIO
         public static string ReadGenericStringElement(XmlReader xr, string sElement)
         {
             if (xr.Name != sElement)
-                throw new System.Exception("not at the correct node");
+                throw new XmlioExceptionInternalParserFailure("not at the correct node");
 
             if (xr.NodeType == XmlNodeType.Attribute)
             {
@@ -366,7 +366,7 @@ namespace XMLIO
             else if (sValue == "1" || sValue == "true")
                 fValue = true;
             else
-                throw new FormatException($"{sValue} is not a boolean value");
+                throw new XmlioExceptionSchemaFailure($"{sValue} is not a boolean value");
 
             return true;
         }
@@ -405,7 +405,7 @@ namespace XMLIO
         public static string[] ReadElementWithChildrenElementArray(string sRootElement, XmlReader xr, string sArrayElement)
         {
             if (xr.Name != sRootElement)
-                throw new System.Exception("not at the correct node");
+                throw new XmlioExceptionInternalParserFailure("not at the correct node");
 
             if (xr.IsEmptyElement)
             {
@@ -422,7 +422,7 @@ namespace XMLIO
                 if (nt == XmlNodeType.EndElement)
                 {
                     if (xr.Name != sRootElement)
-                        throw new System.Exception($"encountered end node not matching <{sRootElement}>");
+                        throw new XmlioExceptionXmlSyntaxError($"encountered end node not matching <{sRootElement}>");
 
                     // this just means that it had child text nodes that didn't matter (like whitespace or comments)
                     // its ok, just advance reader past it and return
@@ -447,12 +447,12 @@ namespace XMLIO
                         }
 
                         if (xr.Name != sArrayElement)
-                            throw new System.Exception("not at the correct node");
+                            throw new XmlioExceptionSchemaFailure("not at the correct node");
                     }
                 }
             }
 
-            throw new System.Exception($"didn't find string child in {sRootElement}");
+            throw new XmlioExceptionSchemaFailure($"didn't find string child in {sRootElement}");
         }
 
         public interface IContentCollector
@@ -531,7 +531,7 @@ namespace XMLIO
 
                 // prepare read the attributes
                 if (!XmlIO.Read(xr))
-                    throw new System.Exception("can't unclosed secretFileConfig element");
+                    throw new XmlioExceptionXmlSyntaxError("can't process attributes, premature close?");
 
                 XmlIO.SkipNonContent(xr);
             }
@@ -548,7 +548,7 @@ namespace XMLIO
                     if (xr.Name != "xmlns")
                     {
                         if (processAttribute == null || !processAttribute(xr.Name, xr.Value, t))
-                            throw new System.Exception($"bad attribute {xr.Name}");
+                            throw new XmlioExceptionSchemaFailure($"bad attribute {xr.Name}");
                     }
                     // handle xml namespace declarations here if we want...
 
@@ -561,7 +561,7 @@ namespace XMLIO
                 }
 
                 if (fRootWasEmpty)
-                    throw new System.Exception("empty element with no attributes at root? shouldn't get here");
+                    throw new XmlioExceptionInternalParserFailure("empty element with no attributes at root? shouldn't get here");
 
                 // if we got here, we aren't an empty tag, so we at least have empty content
                 contentCollect?.StartContentCollection();
@@ -569,7 +569,7 @@ namespace XMLIO
                 if (xr.NodeType == XmlNodeType.Element)
                 {
                     if (parseElement == null)
-                        throw new System.Exception($"unknown element {xr.Name}");
+                        throw new XmlioExceptionSchemaFailure($"unknown element {xr.Name}");
 
                     // if it the parse returns false, that just means it was an empty element...
                     parseElement(xr, xr.Name, t);
@@ -579,7 +579,7 @@ namespace XMLIO
                 if (xr.NodeType == XmlNodeType.EndElement)
                 {
                     if (xr.Name != sRootElement)
-                        throw new System.Exception($"open element {sRootElement} does not match close element {xr.Name}");
+                        throw new XmlioExceptionXmlSyntaxError($"open element {sRootElement} does not match close element {xr.Name}");
                     XmlIO.Read(xr);
                     XmlIO.SkipNonContent(xr);
                     break;
@@ -588,7 +588,7 @@ namespace XMLIO
                 if (xr.NodeType == XmlNodeType.Text)
                 {
                     if (contentCollect == null)
-                        throw new System.Exception($"text encountered without text collector: {xr.Value}");
+                        throw new XmlioExceptionSchemaFailure($"text encountered without text collector: {xr.Value}");
 
                     contentCollect.AddTextContent(xr.Value);
                     XmlIO.Read(xr);
@@ -599,7 +599,7 @@ namespace XMLIO
                 if (xr.NodeType == XmlNodeType.CDATA)
                 {
                     if (contentCollect == null)
-                        throw new System.Exception($"cdata encountered without text collector: {xr.Value}");
+                        throw new XmlioExceptionSchemaFailure($"cdata encountered without text collector: {xr.Value}");
 
                     contentCollect.AddCDataContent(xr.Value);
                     XmlIO.Read(xr);
@@ -607,7 +607,7 @@ namespace XMLIO
                     continue;
                 }
 
-                throw new System.Exception($"unknown node type {xr.NodeType}");
+                throw new XmlioExceptionInternalParserFailure($"unknown node type {xr.NodeType}");
             }
 
             return true;
